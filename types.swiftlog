@@ -1,0 +1,11 @@
+type(int).
+type(float).
+type(string).
+type(array(T)) :- type(T).
+type(dictionary(T, V)) :- hashable(T), type(V).
+type(maybe(T)) :- type(T).
+type(function(T, V)) :- type(T), type(V).
+
+hashable(int).
+hashable(float).
+hashable(string).
