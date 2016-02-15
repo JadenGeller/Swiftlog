@@ -9,18 +9,6 @@
 import Axiomatic
 import Parsley
 
-enum Command {
-    case Open(String)
-    case Clear
-}
-
-let open = dropLeft(
-    pair(string("$load"), whitespace),
-    many1(letter ?? digit ?? character(".") ?? character("/"))
-).withError("open").stringify().map(Command.Open)
-
-let clear = string("$clear").withError("clear").replace(Command.Clear)
-
 let query = dropRight(
     separatedBy1(predicate, delimiter: between(whitespace, parse: character(","))),
     between(whitespace, parse: character("."))
