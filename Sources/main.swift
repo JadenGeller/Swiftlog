@@ -21,12 +21,9 @@ let open = dropLeft(
 
 let clear = string("$clear").withError("clear").replace(Command.Clear)
 
-let query = dropLeft(
-    between(whitespace, parse: character("?")),
-    dropRight(
-        separatedBy1(predicate, delimiter: between(whitespace, parse: character(","))),
-        between(whitespace, parse: character("."))
-    )
+let query = dropRight(
+    separatedBy1(predicate, delimiter: between(whitespace, parse: character(","))),
+    between(whitespace, parse: character("."))
 )
 
 let logic = many(Parser<Character, Clause> { state in
@@ -42,55 +39,52 @@ enum InputError: ErrorType {
     case EndOfFile
 }
 
+guard Process.arguments.count == 2 else {
+    fatalError("usage: \(Process.arguments[0]) [filename]")
+}
+let filename = Process.arguments[1]
+
+let system: Logic
+if let file = FileStream(filename) {
+    do {
+        let parsed = try terminating(logic).parse(file)
+        system = Logic(clauses: parsed)
+        print("Successfully loaded")
+    }
+    catch let error {
+        fatalError("File contains invalid syntax: \(error)")
+    }
+} else {
+    fatalError("Invalid filename")
+}
+
 do {
-    var logicSystem: Logic? = nil
     while true {
-        print("> ", terminator: "")
+        print("? ", terminator: "")
         guard let line = InputStream().getLine() else { throw InputError.EndOfFile }
         do {
-            let input = try terminating(either(open ?? clear, query)).parse(line.characters)
-            switch input {
-            case .Left(.Clear):
-                print("clear")
-            case .Left(.Open(let filename)):
-                if let file = FileStream(filename) {
-                    do {
-                        let parsed = try terminating(logic).parse(file)
-                        logicSystem = Logic(clauses: parsed)
-                        print("Successfully loaded")
-                    }
-                    catch let error {
-                        print("File contains invalid syntax: \(error)")
-                    }
+            let q = try terminating(query).parse(line.characters)
+            
+            let success = system.query(q) { results in
+                if results.isEmpty {
+                    print("True")
                 } else {
-                    print("Invalid filename")
-                }
-            case .Right(let query):
-                guard let system = logicSystem else {
-                    print("Cannot execute query before loading file")
-                    continue
-                }
-                let success = system.query(query) { results in
-                    if results.isEmpty {
-                        print("True")
-                    } else {
-                        print(results)
-                        while true {
-                            guard let char = InputStream().getLine() else { throw InputError.EndOfFile }
-                            switch char {
-                            case "c":
-                                throw SystemException.Continue
-                            case "b":
-                                throw SystemException.Break
-                            default:
-                                print("Unkown action. Type `c` to continue or `b` to break.")
-                            }
+                    print(results)
+                    while true {
+                        guard let char = InputStream().getLine() else { throw InputError.EndOfFile }
+                        switch char {
+                        case "c":
+                            throw SystemException.Continue
+                        case "b":
+                            throw SystemException.Break
+                        default:
+                            print("Unkown action. Type `c` to continue or `b` to break.")
                         }
                     }
                 }
-                if !success {
-                    print("False")
-                }
+            }
+            if !success {
+                print("False")
             }
         } catch {
             print("Input error")
