@@ -27,11 +27,13 @@ enum InputError: ErrorType {
     case EndOfFile
 }
 
+// Parse input
 guard Process.arguments.count == 2 else {
     fatalError("usage: \(Process.arguments[0]) [filename]")
 }
 let filename = Process.arguments[1]
 
+// Load file
 let system: Logic
 if let file = FileStream(filename) {
     do {
@@ -46,13 +48,19 @@ if let file = FileStream(filename) {
     fatalError("Invalid filename")
 }
 
+// Run loop
 do {
     while true {
+        // Print prompt
         print("? ", terminator: "")
+        
+        // Get line
         guard let line = InputStream().getLine() else { throw InputError.EndOfFile }
         do {
+            // Parse query
             let q = try terminating(query).parse(line.characters)
             
+            // Run query
             let success = system.query(q) { results in
                 if results.isEmpty {
                     print("True")
@@ -79,5 +87,6 @@ do {
         }
     }
 } catch {
+    // Quit
     print("")
 }
