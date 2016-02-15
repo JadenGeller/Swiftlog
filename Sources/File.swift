@@ -38,6 +38,8 @@ public final class InputStream: Stream {
 }
 
 extension Stream: SequenceType, GeneratorType {
+    // NOTE THAT STDIN IS LINE BUFFERED
+    // SO WE CAN'T JUSE GET A SINGLE CHAR
     public func next() -> Character? {
         let c = fgetc(file)
         guard c != EOF else { return nil }
@@ -46,12 +48,12 @@ extension Stream: SequenceType, GeneratorType {
 }
 
 extension Stream {
-    func getLine() -> String {
+    func getLine() -> String? {
         var line = ""
         while let c = next() {
-            guard c != "\n" else { break }
+            guard c != "\n" else { return line }
             line.append(c)
         }
-        return line
+        return nil
     }
 }

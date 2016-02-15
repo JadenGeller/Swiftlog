@@ -6,6 +6,7 @@
 //  Copyright © 2016 Jaden Geller. All rights reserved.
 //
 
+import Axiomatic
 import Parsley
 
 enum Command {
@@ -37,35 +38,64 @@ let logic = many(Parser<Character, Clause> { state in
     return c
 })
 
-var logicSystem: Logic? = nil
-while true {
-    let line = InputStream().getLine()
-    do {
-        let input = try terminating(either(open ?? clear, query)).parse(line.characters)
-        switch input {
-        case .Left(.Clear):
-            print("clear")
-        case .Left(.Open(let filename)):
-            if let file = FileStream(filename) {
-                do {
-                    let parsed = try terminating(logic).parse(file)
-                    logicSystem = Logic(clauses: parsed)
-                    print("Successfully loaded")
+enum InputError: ErrorType {
+    case EndOfFile
+}
+
+do {
+    var logicSystem: Logic? = nil
+    while true {
+        print("> ", terminator: "")
+        guard let line = InputStream().getLine() else { throw InputError.EndOfFile }
+        do {
+            let input = try terminating(either(open ?? clear, query)).parse(line.characters)
+            switch input {
+            case .Left(.Clear):
+                print("clear")
+            case .Left(.Open(let filename)):
+                if let file = FileStream(filename) {
+                    do {
+                        let parsed = try terminating(logic).parse(file)
+                        logicSystem = Logic(clauses: parsed)
+                        print("Successfully loaded")
+                    }
+                    catch let error {
+                        print("File contains invalid syntax: \(error)")
+                    }
+                } else {
+                    print("Invalid filename")
                 }
-                catch let error {
-                    print("File contains invalid syntax: \(error)")
+            case .Right(let query):
+                guard let system = logicSystem else {
+                    print("Cannot execute query before loading file")
+                    continue
                 }
-            } else {
-                print("Invalid filename")
+                let success = system.query(query) { results in
+                    if results.isEmpty {
+                        print("True")
+                    } else {
+                        print(results)
+                        while true {
+                            guard let char = InputStream().getLine() else { throw InputError.EndOfFile }
+                            switch char {
+                            case "c":
+                                throw SystemException.Continue
+                            case "b":
+                                throw SystemException.Break
+                            default:
+                                print("Unkown action. Type `c` to continue or `b` to break.")
+                            }
+                        }
+                    }
+                }
+                if !success {
+                    print("False")
+                }
             }
-        case .Right(let query):
-            guard let system = logicSystem else {
-                print("Cannot execute query before loading file")
-                continue
-            }
-            print(system.query(query))
+        } catch {
+            print("Input error")
         }
-    } catch {
-        print("Input error")
     }
+} catch {
+    print("")
 }

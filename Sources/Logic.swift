@@ -14,29 +14,29 @@ struct Logic {
     init(clauses: [Clause]) {
         var newClauses: [Axiomatic.Clause<String>] = []
         for clause in clauses {
-            var variables: [String : Binding<Axiomatic.Predicate<String>>] = [:]
+            var variables: [String : Binding<Term<String>>] = [:]
             
-            func predicateToAxiomatic(predicate: Predicate) -> Axiomatic.Predicate<String> {
-                return Axiomatic.Predicate(
+            func predicateToAxiomatic(predicate: Predicate) -> Term<String> {
+                return Term(
                     name: predicate.name,
                     arguments: predicate.arguments.map(nodeToAxiomatic)
                 )
             }
             
-            func nodeToAxiomatic(node: Node) -> Term<Axiomatic.Predicate<String>> {
+            func nodeToAxiomatic(node: Node) -> Unifiable<Term<String>> {
                 switch node {
                 case .Variable(let name):
                     if let v = variables[name] {
                         return .Variable(v)
                     } else {
-                        let v = Binding<Axiomatic.Predicate<String>>()
+                        let v = Binding<Term<String>>()
                         variables[name] = v
                         return .Variable(v)
                     }
                 case .Bare(let name):
-                    return .Constant(Axiomatic.Predicate(atom: name))
+                    return .Literal(Term(atom: name))
                 case .Predicate(let pred):
-                    return .Constant(predicateToAxiomatic(pred))
+                    return .Literal(predicateToAxiomatic(pred))
                 }
             }
             let newClause = Axiomatic.Clause<String>(
@@ -48,48 +48,50 @@ struct Logic {
         system = System(clauses: newClauses)
     }
     
-    func query(predicates: [Predicate]) -> [String: String]? {
-        var variables: [String : Binding<Axiomatic.Predicate<String>>] = [:]
+    func query(predicates: [Predicate], onMatch: [String: String] throws -> ()) -> Bool {
+        var variables: [String : Binding<Term<String>>] = [:]
         
-        func predicateToAxiomatic(predicate: Predicate) -> Axiomatic.Predicate<String> {
-            return Axiomatic.Predicate(
+        func predicateToAxiomatic(predicate: Predicate) -> Term<String> {
+            return Term(
                 name: predicate.name,
                 arguments: predicate.arguments.map(nodeToAxiomatic)
             )
         }
         
-        func nodeToAxiomatic(node: Node) -> Term<Axiomatic.Predicate<String>> {
+        func nodeToAxiomatic(node: Node) -> Unifiable<Term<String>> {
             switch node {
             case .Variable(let name):
                 if let v = variables[name] {
                     return .Variable(v)
                 } else {
-                    let v = Binding<Axiomatic.Predicate<String>>()
+                    let v = Binding<Term<String>>()
                     variables[name] = v
                     return .Variable(v)
                 }
             case .Bare(let name):
-                return .Constant(Axiomatic.Predicate(atom: name))
+                return .Literal(Term(atom: name))
             case .Predicate(let pred):
-                return .Constant(predicateToAxiomatic(pred))
+                return .Literal(predicateToAxiomatic(pred))
             }
         }
         
-        var newPredicates: [Axiomatic.Predicate<String>] = []
+        var newPredicates: [Term<String>] = []
         for p in predicates {
             newPredicates.append(predicateToAxiomatic(p))
         }
         
-        var results: [String : String] = [:]
         var count = 0
-        _ = try? system.enumerateMatches(newPredicates) {
-            for (key, value) in variables {
-                results[key] = value.value?.description
+        do {
+            try system.enumerateMatches(newPredicates) {
+                var results: [String : String] = [:]
+                for (key, value) in variables {
+                    results[key] = value.value?.description
+                }
+                try onMatch(results)
+                count += 1
             }
-            count += 1
+        } catch {
         }
-        
-        guard count > 0 else { return nil }
-        return results
+        return count > 0
     }
 }
