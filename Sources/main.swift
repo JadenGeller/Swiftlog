@@ -65,7 +65,10 @@ do {
                 if results.isEmpty {
                     print("True")
                 } else {
-                    print(results)
+                    for (index, (key, value)) in results.enumerate() {
+                        let terminator = index.successor() == results.count ? ";" : ","
+                        print(key + " = " + value + terminator)
+                    }
                     while true {
                         guard let char = InputStream().getLine() else { throw InputError.EndOfFile }
                         switch char {

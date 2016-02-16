@@ -26,6 +26,7 @@ struct Logic {
             func nodeToAxiomatic(node: Node) -> Unifiable<Term<String>> {
                 switch node {
                 case .Variable(let name):
+                    guard name != "_" else { return .Variable(Binding()) }
                     if let v = variables[name] {
                         return .Variable(v)
                     } else {
@@ -61,6 +62,7 @@ struct Logic {
         func nodeToAxiomatic(node: Node) -> Unifiable<Term<String>> {
             switch node {
             case .Variable(let name):
+                guard name != "_" else { return .Variable(Binding()) }
                 if let v = variables[name] {
                     return .Variable(v)
                 } else {
@@ -84,7 +86,7 @@ struct Logic {
         do {
             try system.enumerateMatches(newPredicates) {
                 var results: [String : String] = [:]
-                for (key, value) in variables {
+                for (key, value) in variables where key != "_" {
                     results[key] = value.value?.description
                 }
                 try onMatch(results)

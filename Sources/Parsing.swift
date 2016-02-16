@@ -24,15 +24,11 @@ struct Clause: Equatable {
     let body: [Predicate]
 }
 
-let variable = concat(
-    uppercaseLetter.lift(),
-    many(letter ?? digit ?? character("_"))
-).withError("variable").stringify()
+let variable = (prepend(uppercaseLetter, many(letter ?? digit ?? character("_"))) ?? character("_").lift())
+    .withError("variable").stringify()
 
-let bare = concat(
-    lowercaseLetter.lift(),
-    many(letter ?? digit ?? character("_"))
-).withError("variable").stringify()
+let bare = prepend(lowercaseLetter, many(letter ?? digit ?? character("_")))
+    .withError("variable").stringify()
 
 let predicate = recursive { predicate in
     Parser<Character, Predicate> { state in
